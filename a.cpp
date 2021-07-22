@@ -26,7 +26,7 @@ ll random(ll a, ll b)
 	//  return a + rand()%(b-a+1);
 	return uniform_int_distribution<ll>(a,b)(rng);
 }
-ld drandom(ld a, ld b)
+ld drandom(ld a, ld b)  // double randomization
 {
 	//  assert(a <= b);
 	//  return a + rand()%(b-a+1);
@@ -43,26 +43,30 @@ void show_int(ll x); // shows long long x in binary form
 int name_to_code(); // converts name of hand to its code
 void code_to_name(int code); // converts code of hand to its name (writes it)
 void one_turn(); // simulates one turn XD
-void make_move(bool checking);
-void let_make_move(bool checking);
-void compvhuman_oneturn();
+void make_move(bool checking); // bot makes move, checking is variable for determining who won (after check)
+void let_make_move(bool checking); // human makes move
+void compvhuman_oneturn(); // simulates one turn human vs computer, human deals cards
+void botvbot();
+void computer_deals();
+void human_deals();
+void bot_move(int id);
 
 
 
-vi sizes;
+vi sizes; // sizes[i] signify how many cards have player i 
 int player_turn = 0, bet;
-const int N = 382, mat_size = 65;
-ll C[60][60];
+const int N = 382, mat_size = 65; // number of bets, matrice in ml size
+ll C[60][60]; // newton binomial 
 
 struct bot
 {
-	int id;
-	ld moves[N][mat_size][mat_size], chances[mat_size];
-	void set_random()
+	int id, wins;
+	ld moves[N][mat_size][mat_size], chances[mat_size]; // matrices for ml
+	void set_random() // set random matrices for moves
 	{
 		for(int i=0;i<N;i++) for(int j=0;j<mat_size;j++) for(int g=0;g<mat_size;g++) moves[i][j][g] = drandom(0.0, 2.0);
 	}
-	void print_moves()
+	void print_moves() // print those matrices
 	{
 		for(int i=0;i<N;i++)
 		{
@@ -74,7 +78,7 @@ struct bot
 			cout << "\n";
 		}
 	}
-	void read_moves()
+	void read_moves() // reads matrices from input
 	{
 		for(int i=0;i<N;i++) for(int j=0;j<mat_size;j++) for(int g=0;g<mat_size;g++) cin >> moves[i][j][g];
 	}
@@ -202,16 +206,23 @@ struct bot
 		for(int i = bet + 1; i < N; i++) best.pb(mp(hand_chances[i], i));
 		sort(all(best));
 		reverse(all(best));
-		vi certain;
-		int cnt = 0;
-		for(int i=0;i < best.size() && abs(best[i].fi - 1.0) <= 0.00000001; i++)
-		{
-			certain.pb(best[i].se);
-			cnt = i;
-		}
-		cnt++;
 		int K = 9;
-		for(int i=1;i<K && cnt + i < best.size();i++) best[i+cnt].fi += best[i-1+cnt].fi;
+		
+		if(bet > -1)
+		{
+			//  cerr << "equalizing chances\n";
+			for(int i=0;i<K;i++)
+			{
+				if(best[i].fi < 1.0 - hand_chances[bet]) 
+				{
+					K = i;
+					break;
+				}
+			}
+		}
+		
+		for(int i=0;i<K;i++) best[i].fi = min((ld)1, best[i].fi * best[i].fi * 1.8);
+		for(int i=1;i<K && i < (int)best.size();i++) best[i].fi += best[i-1].fi;
 		
 		//  debug
 		
@@ -222,25 +233,17 @@ struct bot
 		
 		//  for(int i=0;i<K;i++) 
 		//  {
-			//  cerr << "prob = " << setprecision(3) << fixed << best[i+cnt].fi - last << ", ";
-			//  code_to_name(best[i+cnt].se);
-			//  last = best[i+cnt].fi;
+			//  cerr << "prob = " << setprecision(3) << fixed << best[i].fi - last << ", ";
+			//  code_to_name(best[i].se);
+			//  last = best[i].fi;
 		//  }
 		//  cerr << "\n";
 		
 		
 		//  for(int i = bet + 1; i < N; i++) hand_chances[i] += hand_chances[i-1];
 		
-		ld go_certain = drandom(0.4, 0.8) - drandom(0.0, 1.0);
-		
-		if(go_certain >= 0.0 && certain.size() > 0) 
-		{
-			//  cerr << "with certainty: " << go_certain << "\n";
-			return certain[random(0, certain.size() - 1)];
-		}
-		
-		ld choice = drandom(0, best[K-1+cnt].fi);
-		for(int i=0; i < K; i++) if(best[i+cnt].fi >= choice) return best[i+cnt].se;
+		ld choice = drandom(0, best[K-1].fi);
+		for(int i=0; i < K; i++) if(best[i].fi >= choice) return best[i].se;
 		
 		
 	}
@@ -271,7 +274,7 @@ struct bot
 	}
 };
 
-bot me, opp;
+bot me, opp, bots[30];
 
 int main()
 {
@@ -283,6 +286,69 @@ int main()
 			C[i][j] = C[i-1][j] + C[i-1][j-1];
 		}
 	}
+	// preprocessing end
+	
+	G.players = 2;
+	G.__init();
+	#warning this doesnt read number of players!!!
+	for(int i=0;i<G.players;i++) 
+	{
+		bots[i].id = i;
+		bots[i].set_random();
+	}
+	sizes.resize(G.players);
+	
+	clock_t ST = clock();
+	bots[0].read_moves();
+	
+	int last_winner = 0, reps = 101;
+	
+	for(int turnaments = 0; turnaments < 20; turnaments++)
+	{
+		
+		for(int i=0;i<G.players;i++) 
+		{
+			bots[i].wins = 0;
+			if(i == last_winner) continue;
+			bots[i].set_random();
+		}
+	
+		//  bots[0].print_moves();
+		//  return 0;
+		
+		
+		
+		for(int sim = 0; sim < reps; sim++)
+		{
+			if(G.players == 2) 
+			{
+				sizes[0] = sizes[1] = 1;
+			}
+			else for(auto & e: sizes) e = 1;
+			// one simulation
+			for(int turn = 0; turn < 11; turn++)
+			{
+				botvbot();
+			}
+			int M = 0;
+			for(int i=1;i<G.players;i++) if(sizes[i] < sizes[M]) M = i;
+			bots[M].wins++;
+			
+		}
+		
+		for(int i=0;i<G.players;i++) 
+		{
+			if(bots[i].wins > bots[last_winner].wins) last_winner = i;
+		}
+	}
+	
+	clock_t EN = clock();
+	cerr << "one simulation: " << (ld) (EN - ST) / CLOCKS_PER_SEC << "\n";
+	bots[last_winner].print_moves();
+	cerr << "win % = " << setprecision(4) << fixed << (ld) bots[last_winner].wins / reps << "\n";
+	
+	//  computer_deals();
+	//  human_deals();
 	
 	
 	
@@ -297,73 +363,20 @@ int main()
 		//  cout << "\n";
 	//  }
 	
-	G.__init();
-	sizes.resize(G.players, 1);
-	me.id = 0;
+	
+	
+	//  // bot vs bot part
+	//  opp.id = 1;
+	//  for(int turns = 0; turns < 20; turns++)
+	//  {
+		//  botvbot();
+	//  }
 	
 	
 	
-	
-	
-	
-	
-	while(true) // computer with human, human deals cards
-	{
-		cerr << "give my cards (" << sizes[me.id] << ")\n";
-		ll w = 0;
-		while(true)
-		{
-			for(int i=0;i<sizes[me.id];i++) 
-			{
-				string num, suit;
-				cin >> num >> suit;
-				vector <string> col {"C", "D", "H", "S"};
-				vector <string> numb {"2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"};
-				int a, b;
-				for(int i=0;i<4;i++) if(suit == col[i]) 
-				{
-					b = i;
-					break;
-				}
-				for(int i=0;i<13;i++) 
-				{
-					if(num == numb[i])
-					{
-						a = i;
-						break;
-					}
-				}
-				w |= ((1LL << b) << (a * 4));
-				cerr << "(number, suit) now: " << a << " " << b << "\n";
-			}
-			cerr << "are you sure? \n";
-			string tak;
-			cin >> tak;
-			if(tak == "yes" || tak == "y") break;
-		}
-		G.set_my_cards(w);
-		
-		compvhuman_oneturn();
-		
-	}
-	
-	while(true) // computer with human, computer deals cards
-	{
-		one_turn();
-		string wait;
-		cin >> wait;
-	}
+	//  return 0;
 	return 0;
-	
-	G.__init();
-	sizes.resize(G.players, 1);
-	me.id = 0;
-	me.set_random();
-	
-	
-	
-	opp.id = 1;
-	opp.set_random();
+
 	
 	for(int sim = 0; ; sim++)
 	{
@@ -400,6 +413,117 @@ int main()
 	
 	return 0;
 }
+
+void human_deals()
+{
+	G.__init();
+	sizes.resize(G.players, 1);
+	me.id = 0;
+	while(true) // computer with human, human deals cards
+	{
+		cerr << "give my cards (" << sizes[me.id] << ")\n";
+		ll w = 0;
+		while(true)
+		{
+			for(int i=0;i<sizes[me.id];i++) 
+			{
+				string num, suit;
+				cin >> num >> suit;
+				vector <string> col {"C", "D", "H", "S"};
+				vector <string> numb {"2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"};
+				int a, b;
+				for(int j=0;j<4;j++) if(suit == col[j]) 
+				{
+					b = j;
+					break;
+				}
+				for(int j=0;j<13;i++) 
+				{
+					if(num == numb[j])
+					{
+						a = j;
+						break;
+					}
+				}
+				w |= ((1LL << b) << (a * 4));
+				cerr << "(number, suit) now: " << a << " " << b << "\n";
+			}
+			cerr << "are you sure? \n";
+			string tak;
+			cin >> tak;
+			if(tak == "yes" || tak == "y") break;
+		}
+		G.set_my_cards(w);
+		
+		compvhuman_oneturn();
+		
+	}
+}
+void computer_deals()
+{
+	G.__init();
+	sizes.resize(G.players, 1);
+	me.id = 0;
+	while(true) // computer with human, computer deals cards
+	{
+		one_turn();
+		string wait;
+		cin >> wait;
+	}
+}
+
+void botvbot()
+{
+	G.give_cards(sizes);
+	for(int i=0;i<G.players;i++) bots[i].calc_chances();
+	
+	//  cerr << "first player's cards:\n";
+	//  show_deck(G.get_cards(0));
+	//  cerr << "second player's cards:\n";
+	//  show_deck(G.get_cards(1));
+	
+	bet = -1;
+	while(true) // betting in progress
+	{
+		bot_move(player_turn);
+		if(bet == -1) return;
+		player_turn++;
+		if(G.players == player_turn) player_turn = 0;
+	}
+	
+}
+void bot_move(int id) 
+{
+	int cur = bots[id].choose_move();
+	//  code_to_name(cur);
+	//  cerr << "\n";
+	if(cur == -1) 
+	{
+		ll table = G.cards_on_table();
+		//  show_deck(table);
+		if(check(table, bet))
+		{
+			sizes[player_turn]++;
+			//  cerr << "exists\n";
+		}
+		else
+		{
+			int n = G.players;
+			sizes[(player_turn + n - 1) % n]++;
+			player_turn = (player_turn + n - 1) % n;
+			//  cerr << "doesn't exist\n";
+		}
+		bet = -1;
+		return;
+	}
+	else
+	{
+		for(int i=0;i<G.players;i++) if(i != id) bots[i].react(cur);
+	}
+	bet = cur;
+	
+}
+
 
 void compvhuman_oneturn()
 {
@@ -749,7 +873,7 @@ int name_to_code()
 		cin >> type;
 		vector <string> opts {"2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"};
 		int who = -1;
-		for(int i=0;i<opts.size();i++)
+		for(int i=0;i<(int)opts.size();i++)
 		{
 			if(opts[i] == type)
 			{
@@ -774,7 +898,7 @@ int name_to_code()
 		{
 			cin >> type;
 			int sec = -1;
-			for(int i=0;i<opts.size();i++)
+			for(int i=0;i<(int)opts.size();i++)
 			{
 				if(opts[i] == type)
 				{
@@ -807,7 +931,7 @@ int name_to_code()
 		{
 			cin >> type;
 			int sec = -1;
-			for(int i=0;i<opts.size();i++)
+			for(int i=0;i<(int)opts.size();i++)
 			{
 				if(opts[i] == type)
 				{

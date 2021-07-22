@@ -25,8 +25,10 @@ typedef pair<ll,ll> PLL;
 	
 void Game::__init()
 {
-	printf("enter number of players (> 1)\n");
-	scanf("%d", &players);
+	//  cerr << "enter number of players (> 1)\n";
+	//  printf("enter number of players (> 1)\n");
+	//  scanf("%d", &players);
+	
 	assert(players > 1 && players <= 20);
 	cards.resize(players);
 	for(int i=0;i<52;i++) deck.pb(i);
@@ -34,10 +36,10 @@ void Game::__init()
 }
 void Game::give_cards(const vi & sizes)
 {
-	assert(sizes.size() == players);
+	assert((int)sizes.size() == players);
 	random_shuffle(all(deck));
 	int cnt = 0; 
-	for(int j = 0; j < sizes.size(); j++) 
+	for(int j = 0; j < (int)sizes.size(); j++) 
 	{
 		ll cur = 0;
 		for(int i=0;i<sizes[j];i++) 
