@@ -26,7 +26,7 @@ ll random(ll a, ll b)
 	//  return a + rand()%(b-a+1);
 	return uniform_int_distribution<ll>(a,b)(rng);
 }
-ld drandom(ld a, ld b)
+ld drandom(ld a, ld b)  // double randomization
 {
 	//  assert(a <= b);
 	//  return a + rand()%(b-a+1);
@@ -43,40 +43,95 @@ void show_int(ll x); // shows long long x in binary form
 int name_to_code(); // converts name of hand to its code
 void code_to_name(int code); // converts code of hand to its name (writes it)
 void one_turn(); // simulates one turn XD
-void make_move(bool checking);
-void let_make_move(bool checking);
-void compvhuman_oneturn();
+void make_move(bool checking); // bot makes move, checking is variable for determining who won (after check)
+void let_make_move(bool checking); // human makes move
+void compvhuman_oneturn(); // simulates one turn human vs computer, human deals cards
+void botvbot();
+void computer_deals();
+void human_deals();
+void bot_move(int id);
+pair<int,ll> cards_used(int code);
 
 
 
-vi sizes;
+vi sizes; // sizes[i] signify how many cards have player i 
 int player_turn = 0, bet;
-const int N = 382, mat_size = 65;
-ll C[60][60];
+const int N = 382, mat_size = 65; // number of bets, matrice in ml size
+ll C[60][60]; // newton binomial 
 
 struct bot
 {
-	int id;
-	ld moves[N][mat_size][mat_size], chances[mat_size];
-	void set_random()
+	int id, wins;
+	ld moves[N][mat_size][mat_size], chances[mat_size]; // matrices for ml
+	ld mvs[8][2][5]; // new idea of reacting to opponent's moves
+	void set_random() // set random matrices for moves
 	{
-		for(int i=0;i<N;i++) for(int j=0;j<mat_size;j++) for(int g=0;g<mat_size;g++) moves[i][j][g] = drandom(0.0, 2.0);
+		for(int g=0;g<8;g++) for(int i=0;i<2;i++) for(int j=0;j<5;j++) mvs[g][i][j] = drandom(0.0, 2.0);
+		//  for(int i=0;i<N;i++) for(int j=0;j<mat_size;j++) for(int g=0;g<mat_size;g++) moves[i][j][g] = drandom(0.0, 2.0);
 	}
-	void print_moves()
+	void perform_minor() // performing minor changes on moves matrices
 	{
-		for(int i=0;i<N;i++)
+		// for small matrices
+		for(int g=0;g<8;g++)
 		{
-			for(int j=0;j<mat_size;j++)
+			for(int i=0;i<2;i++) 
 			{
-				for(int g=0;g<mat_size;g++) cout << moves[i][j][g] << " ";
+				for(int j=0;j<5;j++) 
+				{
+					int change = random(0, 1);
+					if(change == 0) continue;
+					change = random(0, 1);
+					if(change) mvs[g][i][j] += drandom(0.01, 0.5);
+					else mvs[g][i][j] -= drandom(0.01, 0.5);
+					mvs[g][i][j] = max(mvs[g][i][j], (ld)0.0);
+					mvs[g][i][j] = min(mvs[g][i][j], (ld)2.0);
+				}
+			}
+		}
+		// for large matrices
+		//  for(int i=0;i<N;i++) 
+		//  {
+			//  for(int j = 0; j < mat_size; j++) 
+			//  {
+				//  for(int g = 0; g < mat_size; g++) 
+				//  {
+					//  int change = random(0, 5);
+					//  if(change < 4) continue;
+					//  if(change == 4) moves[i][j][g] += drandom(0.01, 0.6);
+					//  else moves[i][j][g] -= drandom(0.01, 0.6);
+					//  moves[i][j][g] = min((ld)2.0, moves[i][j][g]);
+					//  moves[i][j][g] = max((ld)0.0, moves[i][j][g]);
+				//  }
+			//  }
+		//  }
+	}
+	void print_moves() // print those matrices
+	{
+		for(int g=0;g<8;g++)
+		{
+			for(int i=0;i<2;i++) 
+			{
+				for(int j=0;j<5;j++) cout << setprecision(6) << fixed << mvs[g][i][j] << " ";
 				cout << "\n";
 			}
-			cout << "\n";
 		}
+		//  for(int i=0;i<N;i++)
+		//  {
+			//  for(int j=0;j<mat_size;j++)
+			//  {
+				//  for(int g=0;g<mat_size;g++) cout << setprecision(6) << fixed << moves[i][j][g] << " ";
+				//  cout << "\n";
+			//  }
+			//  cout << "\n";
+		//  }
 	}
-	void read_moves()
+	void read_moves(string where) // reads matrices from input
 	{
-		for(int i=0;i<N;i++) for(int j=0;j<mat_size;j++) for(int g=0;g<mat_size;g++) cin >> moves[i][j][g];
+		ifstream myfile;
+		myfile.open(where);
+		for(int g=0;g<8;g++) for(int i=0;i<2;i++) for(int j=0;j<5;j++) myfile >> mvs[g][i][j];
+		//  for(int i=0;i<N;i++) for(int j=0;j<mat_size;j++) for(int g=0;g<mat_size;g++) myfile >> moves[i][j][g];
+		myfile.close();
 	}
 	inline ld choosing_problem(int n, int a, int b, int c)
 	{
@@ -202,16 +257,31 @@ struct bot
 		for(int i = bet + 1; i < N; i++) best.pb(mp(hand_chances[i], i));
 		sort(all(best));
 		reverse(all(best));
-		vi certain;
-		int cnt = 0;
-		for(int i=0;i < best.size() && abs(best[i].fi - 1.0) <= 0.00000001; i++)
-		{
-			certain.pb(best[i].se);
-			cnt = i;
-		}
-		cnt++;
 		int K = 9;
-		for(int i=1;i<K && cnt + i < best.size();i++) best[i+cnt].fi += best[i-1+cnt].fi;
+		
+		if(bet > -1)
+		{
+			//  cerr << "equalizing chances\n";
+			for(int i=0;i<K;i++)
+			{
+				if(best[i].fi < 1.0 - hand_chances[bet]) 
+				{
+					K = i;
+					break;
+				}
+			}
+		}
+		
+		for(int i=0;i<K;i++) 
+		{
+			cerr << "prob = " << setprecision(3) << fixed << best[i].fi << ", ";
+			code_to_name(best[i].se);
+			// //  last = best[i].fi;
+		}
+		cerr << "\n";
+		
+		for(int i=0;i<K;i++) best[i].fi = min((ld)1, best[i].fi * best[i].fi * 1.8);
+		for(int i=1;i<K && i < (int)best.size();i++) best[i].fi += best[i-1].fi;
 		
 		//  debug
 		
@@ -220,27 +290,13 @@ struct bot
 		//  cerr << "considered options:\n";
 		//  ld last = 0.0;
 		
-		//  for(int i=0;i<K;i++) 
-		//  {
-			//  cerr << "prob = " << setprecision(3) << fixed << best[i+cnt].fi - last << ", ";
-			//  code_to_name(best[i+cnt].se);
-			//  last = best[i+cnt].fi;
-		//  }
-		//  cerr << "\n";
+		
 		
 		
 		//  for(int i = bet + 1; i < N; i++) hand_chances[i] += hand_chances[i-1];
 		
-		ld go_certain = drandom(0.4, 0.8) - drandom(0.0, 1.0);
-		
-		if(go_certain >= 0.0 && certain.size() > 0) 
-		{
-			//  cerr << "with certainty: " << go_certain << "\n";
-			return certain[random(0, certain.size() - 1)];
-		}
-		
-		ld choice = drandom(0, best[K-1+cnt].fi);
-		for(int i=0; i < K; i++) if(best[i+cnt].fi >= choice) return best[i+cnt].se;
+		ld choice = drandom(0, best[K-1].fi);
+		for(int i=0; i < K; i++) if(best[i].fi >= choice) return best[i].se;
 		
 		
 	}
@@ -248,14 +304,23 @@ struct bot
 	{
 		ld upd[mat_size];
 		//  for(int i=0;i<mat_size;i++) upd[i] = .0;
-		for(int i = 0; i < mat_size; i++)
+		//  for(int i = 0; i < mat_size; i++)
+		//  {
+			//  upd[i] = 0.0;
+			//  for(int j=0;j < mat_size; j++) 
+			//  {
+				//  upd[i] += moves[x][i][j] * chances[j];
+			//  }
+		//  }
+		pair<int, ll> cur = cards_used(x); // current bet (0 - 7) and cards used (mask)
+		
+		for(int i=0;i<13;i++) 
 		{
-			upd[i] = 0.0;
-			for(int j=0;j < mat_size; j++) 
-			{
-				upd[i] += moves[x][i][j] * chances[j];
-			}
+			int bit = (cur.se&(1<<i));
+			if(bit > 0) bit = 1;
+			for(int j=0;j<5;j++) upd[i * 5 + j] = chances[i * 5 + j] * mvs[cur.fi][bit][j];
 		}
+		
 		for(int i=0;i<13;i++) 
 		{
 			ld sum = 0.0;
@@ -271,7 +336,7 @@ struct bot
 	}
 };
 
-bot me, opp;
+bot me, opp, bots[30];
 
 int main()
 {
@@ -283,6 +348,161 @@ int main()
 			C[i][j] = C[i-1][j] + C[i-1][j-1];
 		}
 	}
+	// preprocessing end
+	
+	//  while(true)
+	//  {
+		//  int tmp = name_to_code();
+		//  pair<int, ll> cur = cards_used(tmp);
+		//  cout << cur.fi << "\n";
+		//  show_int(cur.se);
+		//  cout << "\n";
+	//  }
+	//  return 0;
+	
+	bots[0].read_moves("old_best_strat");
+	bots[1].read_moves("best_strat");
+	//  computer_deals();
+	//  return 0;
+	
+	G.players = 2;
+	G.__init();
+	sizes.resize(2);
+	if(G.players == 2) 
+	{
+		sizes[0] = sizes[1] = 1;
+	}
+	else for(auto & e: sizes) e = 1;
+	// one simulation
+	for(int turn = 0; turn < 15; turn++)
+	{
+		botvbot();
+		string wait;
+		cin >> wait;
+	}
+	int M = 0;
+	for(int i=1;i<G.players;i++) if(sizes[i] < sizes[M]) M = i;
+	bots[M].wins++;
+	return 0;
+	
+	
+	// Bots tournament implementation (for ML)
+	
+	G.players = 2;
+	G.__init();
+	#warning this doesnt read number of players!!!
+	for(int i=0;i<G.players;i++) 
+	{
+		bots[i].id = i;
+		bots[i].set_random();
+	}
+	sizes.resize(G.players);
+	
+	clock_t ST = clock();
+	bots[0].read_moves("best_strat");
+	
+	int last_winner = 0, reps = 201;
+	
+	for(int turnaments = 0; turnaments < 5; turnaments++)
+	{
+		
+		for(int i=0;i<G.players;i++) 
+		{
+			bots[i].wins = 0;
+			if(i == last_winner) continue;
+			bots[i].set_random();
+		}
+	
+		//  bots[0].print_moves();
+		//  return 0;
+		
+		
+		
+		for(int sim = 0; sim < reps; sim++)
+		{
+			if(G.players == 2) 
+			{
+				sizes[0] = sizes[1] = 1;
+			}
+			else for(auto & e: sizes) e = 1;
+			// one simulation
+			for(int turn = 0; turn < 15; turn++)
+			{
+				botvbot();
+			}
+			int M = 0;
+			for(int i=1;i<G.players;i++) if(sizes[i] < sizes[M]) M = i;
+			bots[M].wins++;
+			
+		}
+		
+		for(int i=0;i<G.players;i++) 
+		{
+			if(bots[i].wins > bots[last_winner].wins) last_winner = i;
+		}
+	}
+	for(int i=0;i<G.players;i++)
+	{
+		if(i == last_winner) continue;
+		for(int j = 0; j < N; j++) 
+		{
+			for(int g = 0; g < mat_size; g++) 
+			{
+				for(int h = 0; h < mat_size; h++)
+				{
+					bots[i].moves[j][g][h] = bots[last_winner].moves[j][g][h];
+				}
+			}
+		}
+	}
+	for(int turnaments = 0; turnaments < 20; turnaments++)
+	{
+		
+		for(int i=0;i<G.players;i++) 
+		{
+			bots[i].wins = 0;
+			if(i == last_winner) continue;
+			bots[i].perform_minor();
+		}
+	
+		//  bots[0].print_moves();
+		//  return 0;
+		
+		
+		
+		for(int sim = 0; sim < reps; sim++)
+		{
+			if(G.players == 2) 
+			{
+				sizes[0] = sizes[1] = 1;
+			}
+			else for(auto & e: sizes) e = 1;
+			// one simulation
+			for(int turn = 0; turn < 11; turn++)
+			{
+				botvbot();
+			}
+			int M = 0;
+			for(int i=1;i<G.players;i++) if(sizes[i] < sizes[M]) M = i;
+			bots[M].wins++;
+			
+		}
+		
+		for(int i=0;i<G.players;i++) 
+		{
+			if(bots[i].wins > bots[last_winner].wins) last_winner = i;
+		}
+	}
+	
+	clock_t EN = clock();
+	cerr << "one simulation: " << (ld) (EN - ST) / CLOCKS_PER_SEC << "\n";
+	cerr << "win % = " << setprecision(4) << fixed << (ld) bots[last_winner].wins / reps << "\n";
+	
+	
+	bots[last_winner].print_moves();
+	
+	//  computer_deals();
+	//  human_deals();
 	
 	
 	
@@ -297,73 +517,20 @@ int main()
 		//  cout << "\n";
 	//  }
 	
-	G.__init();
-	sizes.resize(G.players, 1);
-	me.id = 0;
+	
+	
+	//  // bot vs bot part
+	//  opp.id = 1;
+	//  for(int turns = 0; turns < 20; turns++)
+	//  {
+		//  botvbot();
+	//  }
 	
 	
 	
-	
-	
-	
-	
-	while(true) // computer with human, human deals cards
-	{
-		cerr << "give my cards (" << sizes[me.id] << ")\n";
-		ll w = 0;
-		while(true)
-		{
-			for(int i=0;i<sizes[me.id];i++) 
-			{
-				string num, suit;
-				cin >> num >> suit;
-				vector <string> col {"C", "D", "H", "S"};
-				vector <string> numb {"2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"};
-				int a, b;
-				for(int i=0;i<4;i++) if(suit == col[i]) 
-				{
-					b = i;
-					break;
-				}
-				for(int i=0;i<13;i++) 
-				{
-					if(num == numb[i])
-					{
-						a = i;
-						break;
-					}
-				}
-				w |= ((1LL << b) << (a * 4));
-				cerr << "(number, suit) now: " << a << " " << b << "\n";
-			}
-			cerr << "are you sure? \n";
-			string tak;
-			cin >> tak;
-			if(tak == "yes" || tak == "y") break;
-		}
-		G.set_my_cards(w);
-		
-		compvhuman_oneturn();
-		
-	}
-	
-	while(true) // computer with human, computer deals cards
-	{
-		one_turn();
-		string wait;
-		cin >> wait;
-	}
+	//  return 0;
 	return 0;
-	
-	G.__init();
-	sizes.resize(G.players, 1);
-	me.id = 0;
-	me.set_random();
-	
-	
-	
-	opp.id = 1;
-	opp.set_random();
+
 	
 	for(int sim = 0; ; sim++)
 	{
@@ -400,6 +567,119 @@ int main()
 	
 	return 0;
 }
+
+void human_deals()
+{
+	G.__init();
+	sizes.resize(G.players, 1);
+	me.id = 0;
+	while(true) // computer with human, human deals cards
+	{
+		cerr << "give my cards (" << sizes[me.id] << ")\n";
+		ll w = 0;
+		while(true)
+		{
+			for(int i=0;i<sizes[me.id];i++) 
+			{
+				string num, suit;
+				cin >> num >> suit;
+				vector <string> col {"C", "D", "H", "S"};
+				vector <string> numb {"2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"};
+				int a, b;
+				for(int j=0;j<4;j++) if(suit == col[j]) 
+				{
+					b = j;
+					break;
+				}
+				for(int j=0;j<13;i++) 
+				{
+					if(num == numb[j])
+					{
+						a = j;
+						break;
+					}
+				}
+				w |= ((1LL << b) << (a * 4));
+				cerr << "(number, suit) now: " << a << " " << b << "\n";
+			}
+			cerr << "are you sure? \n";
+			string tak;
+			cin >> tak;
+			if(tak == "yes" || tak == "y") break;
+		}
+		G.set_my_cards(w);
+		
+		compvhuman_oneturn();
+		
+	}
+}
+void computer_deals()
+{
+	G.players = 2;
+	G.__init();
+	sizes.resize(G.players, 1);
+	me.id = 0;
+	me.read_moves("best_strat");
+	while(true) // computer with human, computer deals cards
+	{
+		one_turn();
+		string wait;
+		cin >> wait;
+	}
+}
+
+void botvbot()
+{
+	G.give_cards(sizes);
+	for(int i=0;i<G.players;i++) bots[i].calc_chances();
+	
+	cerr << "first player's cards:\n";
+	show_deck(G.get_cards(0));
+	cerr << "second player's cards:\n";
+	show_deck(G.get_cards(1));
+	
+	bet = -1;
+	while(true) // betting in progress
+	{
+		bot_move(player_turn);
+		if(bet == -1) return;
+		player_turn++;
+		if(G.players == player_turn) player_turn = 0;
+	}
+	
+}
+void bot_move(int id) 
+{
+	int cur = bots[id].choose_move();
+	code_to_name(cur);
+	//  cerr << "\n";
+	if(cur == -1) 
+	{
+		ll table = G.cards_on_table();
+		//  show_deck(table);
+		if(check(table, bet))
+		{
+			sizes[player_turn]++;
+			//  cerr << "exists\n";
+		}
+		else
+		{
+			int n = G.players;
+			sizes[(player_turn + n - 1) % n]++;
+			player_turn = (player_turn + n - 1) % n;
+			//  cerr << "doesn't exist\n";
+		}
+		bet = -1;
+		return;
+	}
+	else
+	{
+		for(int i=0;i<G.players;i++) if(i != id) bots[i].react(cur);
+	}
+	bet = cur;
+	
+}
+
 
 void compvhuman_oneturn()
 {
@@ -544,8 +824,8 @@ void one_turn()
 	
 	cerr << "I have " << sizes[me.id] << " cards\n";
 	
-	//  cerr << "my cards\n";
-	//  show_deck(G.get_cards(0));
+	cerr << "my cards\n";
+	show_deck(G.get_cards(0));
 	cerr << "your cards\n";
 	show_deck(G.get_cards(1));
 	
@@ -563,7 +843,7 @@ void one_turn()
 		else
 		{
 			let_make_move(1); // opp's turn
-			//  if(bet > -1) me.react(bet);
+			if(bet > -1) me.react(bet);
 		}
 		if(bet == -1) return;
 		player_turn++;
@@ -749,7 +1029,7 @@ int name_to_code()
 		cin >> type;
 		vector <string> opts {"2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"};
 		int who = -1;
-		for(int i=0;i<opts.size();i++)
+		for(int i=0;i<(int)opts.size();i++)
 		{
 			if(opts[i] == type)
 			{
@@ -774,7 +1054,7 @@ int name_to_code()
 		{
 			cin >> type;
 			int sec = -1;
-			for(int i=0;i<opts.size();i++)
+			for(int i=0;i<(int)opts.size();i++)
 			{
 				if(opts[i] == type)
 				{
@@ -807,7 +1087,7 @@ int name_to_code()
 		{
 			cin >> type;
 			int sec = -1;
-			for(int i=0;i<opts.size();i++)
+			for(int i=0;i<(int)opts.size();i++)
 			{
 				if(opts[i] == type)
 				{
@@ -909,3 +1189,149 @@ void code_to_name(int code)
 		cerr << "pokerzysko " << opts[code] << "\n";
 	}
 }
+
+pair<int,ll> cards_used(int code) 
+{
+	if(code == -1) return mp(-1, 0);
+	ll mask = 0;
+	int type = 0;
+	if(code < 13)
+	{
+		type = 0;
+		// highest card;
+		mask |= (1LL << code);
+	}
+	else if(code < 26)
+	{
+		// pair
+		type = 1;
+		code -= 13;
+		mask |= (1LL << code);
+	}
+	else if(code < 182)
+	{
+		// double pair
+		type = 2;
+		code -= 26;
+		int a = code / 12;
+		int b = code - a * 12;
+		if(b >= a) b++;
+		//  cerr << "dwie " << opts[a] << " " << opts[b] << "\n";
+		mask |= (1LL << a);
+		mask |= (1LL << b);
+	}
+	else if(code < 195)
+	{
+		// three of a kind
+		code -= 182;
+		type = 3;
+		mask |= (1LL << code);
+		//  cerr << "trzy " << opts[code] << "\n";
+	}
+	else if(code < 204)
+	{
+		// straight
+		type = 4;
+		code -= 195;
+		for(int i=0;i<5;i++) mask |= (1LL << (code + i));
+	}
+	else if(code < 360)
+	{
+		// full house
+		code -= 204;
+		type = 5;
+		int a = code / 12;
+		int b = code - a * 12;
+		if(b >= a) b++;
+		mask |= (1LL << a);
+		mask |= (1LL << b);
+		
+	}
+	else if(code < 373)
+	{
+		// four of a kind
+		code -= 360;
+		type = 6;
+		mask |= (1LL << code);
+	}
+	else if(code < 382)
+	{
+		// straight flush
+		code -= 373;
+		type = 7;
+		for(int i=0;i<5;i++) mask |= (1LL << (code + i));
+	}
+	return mp(type, mask);
+}
+
+
+
+//  TEMPLATE OF CODES (HANDS):
+void templates(int code)
+{
+if(code == -1) 
+	{
+		cerr << "check\n";
+		return;
+	}
+	vector <string> opts {"2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"};
+	if(code < 0) 
+	{
+		cerr << "no such code (" << code << ")\n";
+		return;
+	}
+	if(code < 13)
+	{
+		// highest card;
+		
+	}
+	else if(code < 26)
+	{
+		// pair
+		code -= 13;
+	}
+	else if(code < 182)
+	{
+		// double pair
+		code -= 26;
+		int a = code / 12;
+		int b = code - a * 12;
+		if(b >= a) b++;
+		
+	}
+	else if(code < 195)
+	{
+		// three of a kind
+		code -= 182;
+		
+	}
+	else if(code < 204)
+	{
+		// straight
+		code -= 195;
+		
+	}
+	else if(code < 360)
+	{
+		// full house
+		code -= 204;
+		int a = code / 12;
+		int b = code - a * 12;
+		if(b >= a) b++;
+		
+		
+	}
+	else if(code < 373)
+	{
+		// four of a kind
+		code -= 360;
+		
+	}
+	else if(code < 382)
+	{
+		// straight flush
+		code -= 373;
+	}
+}
+
+
