@@ -30,33 +30,16 @@ typedef pair<int,int> PII;
 typedef pair<ll,ll> PLL;
 constexpr ll nax = 2e5+6969, INF = 2e9+6969;
 
-/*
-ll random(ll a, ll b)
-{
-	assert(a <= b);
-	//  return a + rand()%(b-a+1);
-	return uniform_int_distribution<ll>(a,b)(rng);
-}
-ld drandom(ld a, ld b)  // double randomization
-{
-	//  assert(a <= b);
-	//  return a + rand()%(b-a+1);
-	return uniform_real_distribution<ld>(a,b)(rng);
-}
-//  Game G;
-*/
 
+//  void show_card(int a); // show single card // gui 
+//  void show_deck(ll deck); // shows given deck of cards (as a mask) // gui
+//  bool check(ll cards, int hand); // checks if hand exist in cards (cards is mask, hand is code from 0 to 381
+//  // ll cards_to_mask(const vector <PII> & v); // converts cards to mask. Bruh I don't even use it 
+//  void show_int(ll x); // shows long long x in binary form. // gui, but mostly for debugging
+//  int name_to_code(); // converts name of hand to its code // gui
+//  void code_to_name(int code); // converts code of hand to its name (writes it) // gui 
 
-
-void show_card(int a); // show single card // gui 
-void show_deck(ll deck); // shows given deck of cards (as a mask) // gui
-bool check(ll cards, int hand); // checks if hand exist in cards (cards is mask, hand is code from 0 to 381
-//  ll cards_to_mask(const vector <PII> & v); // converts cards to mask. Bruh I don't even use it 
-void show_int(ll x); // shows long long x in binary form. // gui, but mostly for debugging
-int name_to_code(); // converts name of hand to its code // gui
-void code_to_name(int code); // converts code of hand to its name (writes it) // gui 
-
-pair<int,ll> cards_used(int code); // returns which cards are used in particular hand
+//  pair<int,ll> cards_used(int code); // returns which cards are used in particular hand
 
 
 
@@ -96,12 +79,12 @@ int main()
 	//  }
 	//  return 0;
 	
-	//  bots[0].read_moves("noreact_strat");
+	//  bots[0].read_moves("noreact_strat"); // to play bot v bot and check results 
 	//  bots[1].read_moves("best_strat");
 	
 	
-	computer_deals(sizes, G, bet, me, player_turn, C);
-	return 0;
+	//  computer_deals(sizes, G, bet, me, player_turn, C); // to play with computer
+	//  return 0;
 	
 	//  G.players = 2;
 	//  G.__init();
@@ -287,7 +270,6 @@ int main()
 	
 	
 	
-	//  return 0;
 	return 0;
 	
 	while(true)
