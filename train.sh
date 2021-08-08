@@ -1,4 +1,4 @@
-g++ -O3 game.cpp a.cpp -o a
+g++ -O3 game.cpp modes.cpp a.cpp -o a
 
 for((i=1;;i++)); do
 	echo $i

@@ -22,5 +22,3 @@ void show_deck(ll deck);
 ll cards_to_mask(const vector <PII> &v);
 void show_int(ll x);
 bool check(ll cards, int hand);
-int name_to_code();
-void code_to_name(int code);

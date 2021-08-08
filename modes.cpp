@@ -79,7 +79,7 @@ void computer_deals(vi & sizes, Game & G, int & bet, bot & me, int & player_turn
 	
 	sizes.resize(G.players, 1);
 	me.id = 0;
-	me.read_moves("best_strat");
+	me.read_moves("./sample/best_strat");
 	while(true) // computer with human, computer deals cards
 	{
 		one_turn(G, bet, sizes, me, player_turn, C);
@@ -284,8 +284,8 @@ void one_turn(Game & G, int & bet, vi & sizes, bot & me, int & player_turn, cons
 	
 	cerr << "I have " << sizes[me.id] << " cards\n";
 	
-	cerr << "my cards\n";
-	show_deck(G.get_cards(0));
+	//  cerr << "my cards\n";
+	//  show_deck(G.get_cards(0));
 	cerr << "your cards\n";
 	show_deck(G.get_cards(1));
 	
@@ -464,188 +464,4 @@ bool check(ll cards, int hand)
 	}
 	cerr << "CHECKING NON-EXISTING HAND\n";
 	return false;
-}
-
-int name_to_code()
-{
-	// available names: (in polish)
-	
-	//  jedna X
-	//  para X
-	//  dwie X Y
-	//  trzy X
-	//  strit X
-	//  full X Y
-	//  kareta X
-	//  poker X
-	
-	
-	string s;
-	while(true)
-	{
-		cin >> s;
-		if(s == "check") return -1;
-		string type;
-		cin >> type;
-		vector <string> opts {"2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"};
-		int who = -1;
-		for(int i=0;i<(int)opts.size();i++)
-		{
-			if(opts[i] == type)
-			{
-				who = i;
-				break;
-			}
-		}
-		if(who == -1)
-		{
-			cerr << "No such card!\n";
-			continue;
-		}
-		if(s == "jedna")
-		{
-			return who;
-		}
-		if(s == "para")
-		{
-			return 13 + who;
-		}
-		if(s == "dwie")
-		{
-			cin >> type;
-			int sec = -1;
-			for(int i=0;i<(int)opts.size();i++)
-			{
-				if(opts[i] == type)
-				{
-					sec = i;
-					break;
-				}
-			}
-			if(sec == -1) 
-			{
-				cerr << "No such card (second)!\n";
-				continue;
-			}
-			if(sec > who) sec--;
-			return 26 + who * 12 + sec;
-		}
-		if(s == "trzy")
-		{
-			return 182 + who;
-		}
-		if(s == "strit")
-		{
-			if(who > 8) 
-			{
-				cerr << "No such strit\n";
-				continue;
-			}
-			return 195 + who;
-		}
-		if(s == "full")
-		{
-			cin >> type;
-			int sec = -1;
-			for(int i=0;i<(int)opts.size();i++)
-			{
-				if(opts[i] == type)
-				{
-					sec = i;
-					break;
-				}
-			}
-			if(sec == -1) 
-			{
-				cerr << "No such card (second)!";
-				continue;
-			}
-			if(sec > who) sec--;
-			return 204 + who * 12 + sec;
-		}
-		if(s == "kareta")
-		{
-			return 360 + who;
-		}
-		if(s == "poker")
-		{
-			if(who > 8)
-			{
-				cerr << "No such poker\n";
-				continue;
-			}
-			return 373 + who;
-		}
-		cerr << "no such poker hand\ntry for example:\n";
-		cerr << "jedna X\npara X\ndwie X Y\ntrzy X\nstrit X\nfull X Y\nkareta X\npoker X\n\nWhere X Y signify cards\n";
-	}
-	
-}
-void code_to_name(int code)
-{
-	if(code == -1) 
-	{
-		cerr << "check\n";
-		return;
-	}
-	vector <string> opts {"2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"};
-	if(code < 0) 
-	{
-		cerr << "no such code (" << code << ")\n";
-		return;
-	}
-	if(code < 13)
-	{
-		// highest card;
-		cerr << "jedna " << opts[code] << "\n";
-		
-	}
-	else if(code < 26)
-	{
-		// pair
-		cerr << "para " << opts[code - 13] << "\n";
-	}
-	else if(code < 182)
-	{
-		// double pair
-		code -= 26;
-		int a = code / 12;
-		int b = code - a * 12;
-		if(b >= a) b++;
-		cerr << "dwie " << opts[a] << " " << opts[b] << "\n";
-	}
-	else if(code < 195)
-	{
-		// three of a kind
-		code -= 182;
-		cerr << "trzy " << opts[code] << "\n";
-	}
-	else if(code < 204)
-	{
-		// straight
-		code -= 195;
-		cerr << "strit " << opts[code] << "\n";
-	}
-	else if(code < 360)
-	{
-		// full house
-		code -= 204;
-		int a = code / 12;
-		int b = code - a * 12;
-		if(b >= a) b++;
-		cerr << "full " << opts[a] << " " << opts[b] << "\n";
-		
-	}
-	else if(code < 373)
-	{
-		// four of a kind
-		code -= 360;
-		cerr << "kareta " << opts[code] << "\n";
-	}
-	else if(code < 382)
-	{
-		// straight flush
-		code -= 373;
-		cerr << "pokerzysko " << opts[code] << "\n";
-	}
 }

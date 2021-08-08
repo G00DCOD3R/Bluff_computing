@@ -10,6 +10,9 @@ typedef pair<ll,ll> PLL;
 ll random(ll a, ll b);
 ld drandom(ld a, ld b);
 
+int name_to_code();
+void code_to_name(int code);
+
 class Game
 {
 	public:
